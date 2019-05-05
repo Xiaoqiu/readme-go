@@ -144,13 +144,254 @@ import(
   "fmt"
 )
 // 第六章，会学到分配一个名字给函数的返回值
+// 返回多个参数，
 func retThree(x int)(int, int, int)  {
   return 2*x, x*x, -x
 }
 
+func main()  {
+  // 元祖赋值，可以使用_忽略你不使用的参数
+  fmt.Println(retThree(10))
+  n1,n2,n3 := retThree(20)
+  fmt.Println(n1,n2,n3)
+
+  // 其他元祖的使用
+  // 交换位置
+  n1,n2 = n2,n1
+  fmt.Println(n1,n2,n3)
+
+  //表达式计算
+  x1, x2, x3 := n1*2, n1*n1, -n1
+  fmt.Println(x1,x2,x3)
+
+}
+// 执行：go run tuples.go
 ```
 ## 正则表达式和模式匹配
+- regexp package
+
+### 理论
+### 简单例子
+- 从一行文本中获取一列
+- 一行一行读取一个文本
+- 两个参数：列序号，文本文件路径
+```go
+// seletctColumn.go
+package main
+import (
+  "bufio"
+  "fmt"
+  "io"
+  "os"
+  "strconv"
+  "strings"
+)
+func main()  {
+  arguaments := os.Args
+  if len(arguaments) < 2 {
+    fmt.Printf("usage: selectColumn column <file> | <file2> [...fileN]\n")
+    os.Exit(1)
+  }
+  temp, err := strconv.Atoi(arguaments[1])
+  if err != nil {
+    fmt.Println("Column value is not an integer:", temp)
+    return
+  }
+  column := temp
+  if column < 0 {
+    fmt.Println("Invalid Column number!")
+    os.Exit(1)
+  }
+
+  for _,filename := range arguaments[2:] {
+    fmt.Println("\t\t",filename)
+    f,err := os.Open(filename)
+    if err != nil {
+      fmt.Printf("error opening file %s\n", err)
+      continue
+    }
+    defer f.Close()
+
+    r := bufio.NewReader()
+    for {
+      // 按照行读取，返回一个byte slice
+      line,err := r.ReadString('\n')
+
+      if err == io.EOF {
+        beak
+      } else if err != nil {
+        fmt.Printf("error reading file %s", err)
+      }
+      // strings.Fields()函数分割字符串使用一个空格
+      data := strings.Fields(line)
+      if len(data) >= column {
+        fmt.Println(data[column-1])
+      }
+    }
+  }
+
+}
+
+
+```
+```bash
+go run selectColumn.go 15 /tmp/swtag.log /tmp/adobegc.log
+```
+### 高级例子
+- 匹配一个日期和时间字符，在日志里面
+- 改变日志文件的日期和时间格式
+- 也要一行行读取文本文件
+- 使用了两个正则表达式
+```go
+package main
+import (
+  "fmt"
+  "os"
+  "bufio"
+  "io"
+  "regexp"
+  "strings"
+  "time"
+)
+  func main()  {
+    arguaments := os.Args
+    if len(arguaments) == 1 {
+      fmt.Println("Please provide one text file to process!")
+      os.Exit(1)
+    }
+    filename := arguaments[1]
+    f,err := os.Open(filename)
+    if err != nil {
+      fmt.Printf("error opening file %s", err)
+      os.Exit(1)
+    }
+    defer f.Close()
+
+    notAMatch := 0
+    r := bufio.NewReader(f)
+    for {
+      line,err := r.ReadString('\n')
+      if err == io.EOF {
+        break
+      } else if err != nil {
+        fmt.Printf("error reading file %s", err)
+      }
+
+      // 匹配第一种日期格式
+      r1 := regexp.MustCompile('.*\[(\d\d\/w+\d\d\d\d:\d\d:\d\d:\d\d.*)\] .*')
+      if r1.MatchString(line) {
+        match := r1.FindStringSubmatch(line)
+        d1, err := time.Parse("02/Jan/2006:15:04:05 -0700",match[1])
+        if err == nil {
+          newFormat := d1.Format(time.Stamp)
+          fmt.Print(strings.Replace(line,match[1],newFormat,1))
+        } else {
+          notAMatch++
+        }
+        continue
+      }
+      // 匹配第二种日期格式
+      r2 := regexp.MustCompile('.*\[(\w+\-\d\d-\d\d:\d\d:\d\d:\d\d.*)\].*')
+      if r2.MarchString(line) {
+        match := r2.FindStringSubmatch(line)
+        d1,err := time.Parse("Jan-02-06:15:04:05 -0700", match[1])
+        if err == nil {
+          newFormat := d1.Format(time.Stamp)
+          fmt.Print(strings.Replace(line,match[1],newFormat,1))
+        } else {
+          notAMatch++
+        }
+        continue
+      }    
+    }
+    fmt.Println(notAMatch,"lines did not match!")
+  }
+
+// go run changDT.go logEntries.txt
+
+```
+### 匹配IPv4地址
+- 8位二进制数字
+- 每位0-255
+```go
+// findIPv4.go
+package main
+import(
+  "bufio"
+  "fmt"
+  "io"
+  "net"
+  "os"
+  "path/filepath"
+  "regexp"
+)
+// 可以修改这个方法，获取你需要监控的IP
+func findIP(input string) string  {
+  //匹配一个部分，
+  // 25开头后面一位可以是：0，1，2，3，4，5
+  // 或 2开头0，1，2，3，4，最后一位：0，1，2，3，4，5，6，7，8，9
+  // 或 1开头：后面[0-9][0-9]
+  // 或 第一位：[1-9],第二位[0-9]
+  partIP := "25([0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])"
+  //
+  grammar := partIP + "\\." + partIP + "\\." + partIP + "\\." + partIP
+  matchMe := regexp.MustCompile(grammar)
+  return matchMe.FindString(input)
+
+}
+func main()  {
+  arguments := os.Args
+  if len(arguments) < 2 {
+    fmt.Printf("usage: %s logFile\n", filepath.Base(arguments[0]))
+    os.Exit(1)
+  }
+
+  for _,filename := range arguments[1:] {
+    f, err := os.Open(filename)
+    if err != nil {
+      fmt.Printf("error opening file %s\n", err)
+      os.Exit(-1)
+    }
+    defer f.Close()
+
+    r := bufio.NewReader(f)
+    for {
+      line,err := r.ReadString("\n")
+      if err == io.EOF {
+        break
+      } else if err != nil{
+         fmt.Printf("error reading file %s", err)
+         break
+      }
+      // 每一行都调用一次IP正则匹配
+      ip := findIP(line)
+      // 二次验证是否是ipv4的地址，如果是就打印出来
+      trial := net.ParseIP(ip)
+      if trial.To4() == nil {
+        continue
+      } else {
+        fmt.Println(ip)
+      }
+    }
+  }
+}
+
+// go run findIPv4.go /tmp/auth.log
+
+// ipv4 地址出现次数最多的会出现在前面
+// go run findIPv4.go /tmp/auth.log.1 /tmp/auth.log | sort -rn | uniq -c | sort -rn
+
+```
 ## Strings
+### 什么是rune
+- rune
+- character
+- string
+- 字符串常量（string literal）
+
+### unicode package
+### strings package
+
 ## switch命令
 ## 计算π使用高的精确度
 ## 开发一个key/value存储使用Go
