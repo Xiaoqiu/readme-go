@@ -227,21 +227,108 @@ func main()  {
   fmt.Println("A Go statements!")
 }
 ```
+
 ```bash
 $ go run cGo.go
 A Go statement!
 Calling C code!
 Another Go statement!
 ```
+
 ### 在go里面访问C语言，两者不同的文件中
-- 
 ### C code
+```c
+// callClib/callC.h
+#ifndef CALLC_H
+#define CALLC_H
+
+void cHello()
+void printMessage(char* message)
+
+# endif
+```
+```c
+// 路径：callClib/callc.h
+#include <stdio.h>
+#include "callC.h"
+void cHello(){
+  printf("Hello from C !\n");
+}
+void printMessage(char* message) {
+  printf("Go send me %s\n", message);
+}
+```
 
 ### Go code
+- c package告诉go build 去处理输入文件使用cgo 工具，在go 编译器处理go文件之前。
+- 仍然需要使用注释去告诉Go程序，关于C代码。
+- 这个例子，告诉go代码去找到两个c代码文件。
+
+```go
+package main
+// #cgo CFLAGS: -I${SRCDIR}/callClib
+// #cgo LDFLAGS: ${SRCDIR}/callC.a
+// #include<stdlib.h>
+// #include<callC.h>
+import "C"
+import (
+  "fmt"
+  "unsafe"
+)
+func main()  {
+  fmt.Println("Go to call a C function")
+  C.cHello()
+  fmt.Println("Going to call another C function!")
+  // 创建一个可以传递给C语言的字符串
+  myMessage := C.CString("This is Mihalis!")
+  //需要释放C string的内存，当这个内存不在需要
+  //释放内存需要一个defer的声明，和一个unsafe.Pointer
+  //unsafe.Pointer，是创建一个指针可以操控这个变量的内存
+  defer C.free(unsafe.Pointer(myMessage))
+  C.printMessage(myMessage)
+
+  fmt.Println("All perfectly done!")
+}
+```
 
 ### Mixing Go and C code
+- 执行Go代码来调用C语言
+- 首先需要编译C代码，生产一个library
+```bash
+ls -l callClib/
+## 把C文件编译为Object文件
+gcc -c callClib/*.c
+ls -l callC.o
 
+## 把几个库文件生成一个archive file
+ar rs callC.a *.o
+ls -l callC.a
+
+## 查看生产的的archive文件内容
+file callC.a
+
+## 最后删除原理的库文件
+rm callC.o
+
+## 编译Go文件
+go build callC.go
+ls -l callC
+
+## 查看编译Go代码后生成的执行文件
+file callC
+
+## 执行Go生产的执行文件
+./callC
+
+```
+- 如果是调用简单的C语言，把C和Go写在同一个文件中是合适的。
+- 如果是实现复杂和高级的功能还是需要创建一个静态的C库
 ## 在C语言里面访问go函数
+- 例子里，c语言调用了两个go的方法
+- go package会转化为C共享库，以这种方式被C语言调用
+### Go package
+
+### C code
 
 ## defer关键字
 ## panic和recover
