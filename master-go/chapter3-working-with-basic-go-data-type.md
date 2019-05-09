@@ -180,19 +180,265 @@ s7 [1 2 3 4 5 6 7]
 ```
 
 ### 高纬度slice
-
+// todo
 ### 另外一个slice的例子
-
+// todo
 ### slices排序使用sort.slice()
+// todo
 
 ## go maps
+- 可以使用make()函数创建
+- map是一个hash table的引用。
+- map的key的数据类型必须是可以比较的，这样编译器才能区分不同的key
+- 不要使用floating-point,不同机器存在精确度不一样。
+```go
+// key：string value:int
+iMap = make(map[string]int)
+
+anotherMap := map[string]int {
+	"k1": 12
+	"k2": 13
+}
+
+//
+anotherMap["k1"]
+
+delete(anotherMap,"k1")
+// usingMaps.go
+package main
+
+import (
+	"fmt"
+)
+func main()  {
+	iMap := make(map[string]int)
+	iMap["k1"] = 12
+	iMap["k1"] = 13
+	fmt.Println("iMap",iMap)
+
+	anotherMap := map[string]int {
+		"k1":12,
+		"k2":13,
+	}
+
+	fmt.Println("anotherMap",anotherMap)
+	delete(anotherMap,"k1")
+	delete(anotherMap,"k1")
+	delete(anotherMap,"k1")
+	fmt.Println("anotherMap",anotherMap)
+
+	value,ok := iMap["doesItExist"]
+	fmt.Println("value: " ,value) // 如果这个key不存在，返回的value也是0，就很难判断了。
+	fmt.Println("ok: " ,ok)// 使用这个参数判断这个key是否存在，存在：ok == true
+	if ok {
+		fmt.Println("Exists!")
+	} else {
+		fmt.Println("Does NOT exist!")
+	}
+
+	for key,value := range iMap{ // map的元素返回顺序是随机的
+		fmt.Println(key,value)
+	}
+
+}
+
+```
+```bash
+bogon:master-go kate$ go run usingMap.go
+iMap map[k1:13]
+anotherMap map[k1:12 k2:13]
+anotherMap map[k2:13]
+a:  0
+ok:  false
+Does NOT exist!
+k1 13
+
+```
 ### 存储一个nil的map
+// todo
 ### 什么时候使用
+// todo
 
 ## go constants
+- 程序执行过程中，不能改变他们的值。是在编译过程中定义的。不是运行过程中。
+- const 关键字
+- 最好把所有的常量写到一个package里面
+````go
+const HEIGHT = 200
+
+const (
+		C1 = "C1C1C1"
+		C2 = "C2C2C3"
+		C3 = "C3C3C3"
+)
+
+// 一样的意思
+s1 := "My String"
+var s2 = "My String"
+var s3 string = "My String"
+
+// 有类型的使用的时候要注意类型限制
+const s1 = "My String"
+const s2 string = "My String"
+
+// 例子
+const s1 = 123
+const s2 float64 = 123
+var v1 float32 = s1 * 12 // 没有问题
+var v2 float32 = s2 * 12 // 类型不同，报错
+````
+
+
 ### 常量生成器：iota
 
+```go
+// constants.go
+package main
+import (
+	"fmt"
+)
+
+// 定义两个新的类型
+type Digit int
+type Power2 int
+
+const PI = 3.1415926
+
+const (
+	C1 = "C1C1C1"
+	C2 = "C2C2C3"
+	C3 = "C3C3C3"
+)
+
+func main(){
+	const s1 = 123
+	var v1 float32 = s1 * 12
+	fmt.Println(v1)
+	fmt.Println(PI)
+
+
+	const(
+		Zero Digit = iota
+		One
+		Two
+		Three
+		Four
+	)
+// 上面的常量定义方式等价于
+// const(
+// 	Zero = 0
+// 	One = 1
+// 	Two = 2
+// 	Three = 3
+// 	Four = 4
+// )
+
+
+	fmt.Println(One)
+	fmt.Println(Two)
+
+// iota永远都是增长的，_是忽略掉不使用的值6
+	const(
+		p2_0 Power2 = 1 << iota // iota = 0
+		_
+		p2_2 // iota = 2； 1 << 2 ; 00000100
+		_
+		p2_4 // iota = 4； 1 << 4 ; 00010000
+		_
+		p2_6 // iota = 6； 1 << 4 ; 01000000
+		_
+	)
+
+	fmt.Println("2^0: ",p2_0)
+	fmt.Println("2^2: ",p2_2)
+	fmt.Println("2^4: ",p2_4)
+	fmt.Println("2^6: ",p2_6)
+
+}
+
+```
+
+```bash
+bogon:master-go kate$ go run constants.go
+1476
+3.1415926
+1
+2
+2^0:  1
+2^2:  4
+2^4:  16
+2^6:  64
+```
+
 ## go pointers
+- 只有必要时使用
+- 为了兼容一下原来用ponter实现的语言
+- * ：获取指针的值，叫做指针解析
+- & ： 获取一个不是指针的变量的内存地址
+
+```go
+//指针作为参数的函数
+func getPointer(n *int)  {
+
+}
+
+// 指针作为返回值的函数
+func returnPointer(n int) *int {
+
+}
+
+package main
+import (
+	"fmt"
+)
+
+// 指针参数
+func getPointer(n *int)  {
+ *n = *n * *n
+}
+
+//指针返回值
+func returnPointer(n int) *int  {
+	v := n * n
+	return &v
+}
+
+func main(){
+	i := -10
+	j := 25
+
+	pI := &i
+	pJ := &j
+
+	fmt.Println("pI memory:", pI)
+	fmt.Println("pJ memory:", pJ)
+	fmt.Println("pI value:", *pI)
+	fmt.Println("pJ value:", *pJ)
+
+	*pI = 123456
+	*pI--
+	fmt.Println("i: ",i)
+
+	getPointer(pJ)
+	fmt.Println("j:",j)
+	k := returnPointer(12)
+	fmt.Println(*k)
+	fmt.Println(k)
+
+}
+````
+```bash
+bogon:master-go kate$ go run pointer.go
+pI memory: 0xc00006e008
+pJ memory: 0xc00006e010
+pI value: -10
+pJ value: 25
+i:  123455
+j: 625
+144
+0xc00006e048
+
+```
 ## 处理时间和日期
 
 - 转换不同的日期，和时间
@@ -262,8 +508,42 @@ func main()  {
 ````
 ### 处理时间日期格式
 ```go
+package main
+import (
+	"fmt"
+	"regexp"
+	"time"
+)
+func main(){
+	logs := []string{"127.0.0.1 - - [16/Nov/2017:10:49:46 +0200]325504",
+		"127.0.0.1 - - [16/Nov/2017:10:16:41 +0200] GET CVEN HTTP/1.1 200 12531 - Mozilla/5.0 AppleWebKit/537.36",
+    "127.0.0.1 200 9412 - - [12/Nov/2017:06:26:05 +0200] GET http://www.mtsoukalos.eu/taxonomy/term/47 1507",
+    "[12/Nov/2017:16:27:21 +0300]",
+    "[12/Nov/2017:20:88:21 +0200]",
+    "[12/Nov/2017:20:21 +0200]",
+    }
+
+		for _, logEntry := range logs {
+      r := regexp.MustCompile(".*\[(\d\d\/\w+/\d\d\d\d:\d\d:\d\d:\d\d.*)\].*")
+			if r.MatchString(logEntry) {
+          match := r.FindStringSubmatch(logEntry)
+					dt, err := time.Parse("02/Jan/2006:15:04:05 -0700",
+					 match[1])
+
+					 if err == nil {
+                newFormat := dt.Format(time.RFC850)
+                fmt.Println(newFormat)
+            } else {
+                fmt.Println("Not a valid date time format!")
+            }
+
+				} else {
+            fmt.Println("Not a match!")
+        }
+	}
 
 ```
+
 ## 资源附件
 ## 练习
 ## 总结
