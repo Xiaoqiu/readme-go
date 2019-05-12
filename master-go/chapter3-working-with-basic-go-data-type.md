@@ -180,9 +180,15 @@ s7 [1 2 3 4 5 6 7]
 ```
 
 ### 高纬度slice
-// todo
+- 如果你的代码里面用到了很多这种高纬度的slice那么久重新考虑设计
+```go
+s1 := make([][]int,4)
+```
 ### 另外一个slice的例子
 // todo
+
+
+
 ### slices排序使用sort.slice()
 // todo
 
@@ -254,10 +260,28 @@ Does NOT exist!
 k1 13
 
 ```
-### 存储一个nil的map
-// todo
+### 存储一个key到nil的map
+- 但是查询，删除，获取长度，range，应用到一个nil的map是不会报错的
+```go
+// 这样是没有问题的
+aMap := map[string]int{}
+aMap["test"] = 1
+
+// 这样是有问题的, nil的map是不能赋值的
+aMap := map[string]int{}
+aMap = nil
+fmt.Println(aMap)
+aMap["test"] = 1
+
+```
+```bash
+$ go run failMap.go
+map[]
+panic: assignment to entry in nil map
+````
+
 ### 什么时候使用
-// todo
+- map的比slice和array灵活，处理上开销相对大，但是内置的go结果还是很快的。所以如果觉得有需要还是推荐使用
 
 ## go constants
 - 程序执行过程中，不能改变他们的值。是在编译过程中定义的。不是运行过程中。
