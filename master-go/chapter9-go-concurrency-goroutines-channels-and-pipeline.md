@@ -287,6 +287,92 @@ func f2(c chan<- int, x int) {
 
 ```
 ## pipelines
+- 是一个虚拟的概念，就是利用channel来传递数据，在不同的goroutines之间。
+```go
+package main
+import (
+	"fmt"
+	"math/rand"
+	"os"
+	"strconv"
+	"time"
+)
+var CLOSEA = false
+
+var DATA = make(map[int]bool)
+
+func random(min, max int) int {
+	return rand.Intn(max-min) + min
+}
+// 产生随机数，并写入channelA
+func first(min, max int, out chan<- int)  {
+	for {
+		if CLOSEA {
+			close(out) // 只有写入channel可以关闭
+			return
+		}
+		out <- random(min,max)
+	}
+}
+
+//从channelA读取数据并写入DATA
+//并且把数据写入channelB
+func second(out chan<- int, in <-chan int)  {
+	for x := range in {
+		fmt.Print(x," ")
+		// 如果发现一个随机数已经存在DATA map里面，就设置CLOSEA=true,停止first()函数再写入任何数据到channelA.
+		_,ok := DATA[x]
+		if ok {
+			CLOSEA = true
+		} else {
+			DATA[x] = true // DATA没有这个参数，就设置这个参数为key,value为true
+				out <- x
+		}
+	}
+
+	fmt.Println()
+	close(out) // 数据写完可以关闭channelB
+
+}
+
+//从channelB读取数据，并求和
+func third(in <-chan int) {
+	var sum int
+	sum = 0
+	// 当second()函数关闭channelB,就停止读取的循环。
+	for x2 := range in {
+		sum = sum + x2
+	}
+
+	fmt.Printf("The sum of the random numbers is %d\n", sum)
+}
+
+
+func main(){
+	if len(os.Args) != 3 {
+		fmt.Println("Need two integer parameters!")
+		os.Exit(1)
+	}
+
+	n1, _ := strconv.Atoi(os.Args[1])
+	n2, _ := strconv.Atoi(os.Args[2])
+
+	if n1 > n2 {
+		fmt.Printf("%d should be smaller than %d\n",n1, n2)
+		return
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	A := make(chan int)
+	B := make(chan int)
+
+	go first(n1, n2, A)
+	go second(B, A)
+	third(B)
+
+}
+
+```
 ## addtional resource
 ## 练习
 ## 总结
