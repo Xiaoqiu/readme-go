@@ -188,13 +188,71 @@ import (
 
 func timeout(w *sync.WaitGroup, t time.Duration) bool  {
 	temp := make(chan int)
-	go func ()  {
-		time
+	go func () {
+		time.Sleep(5 * time.Second)
+		defer close(temp)
+		w.Wait() // 阻塞并永远等待下去，等待sync.Done()请求，w.Wait()返回后select的第一个分支会被执行。
+	}()
+
+	select {
+	case <-temp: //w.Wait()返回后select的第一个分支会被执行
+		return false
+	case <-time.After(t):
+		return true
+	}
+}
+
+	func mian() {
+		arguments := os.Args
+		if len(arguments) != 2 {
+			fmt.Println("Need a time duration!")
+			return
+		}
+
+		var w sync.WaitGroup
+		w.Add(1)
+
+		t, err := strconv.Atoi(arguments[1])
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		duration := time.Duration(int32(t)) * time.Millisecond
+		fmt.Printf("Timeout period is %s\n", duration)
+
+		if timeout(&w, duration) {
+			fmt.Println("time out!")
+		} else {
+			fmt.Println("ok!")
+		}
+
+	w.Done()
+	if timeout(&w, duration){
+			fmt.Println("Timed out!")
+	} else {
+		fmt.Println("OK!")
 	}
 }
 
 ```
+```bash
+
+# 超时为10s, 第一个timeout()函数，w.Wait()阻塞了，<-time.After(t):先返回，所以超时。第二个timeout()函数，	w.Done()了，所以这个goroutine里面不需要等待任何东西，所以不会超时。case <-temp:先返回，可以执行。
+$ go run timeOut2.go 10000
+Timeout period is 10s
+Timed out!
+OK!
+
+# 超时很短case <-time.After(t):很快返回，所以两个timeout()函数都没有足够时间执行完成。
+$ go run timeOut2.go 100
+Timeout period is 100ms
+Timed out!
+Timed out!
+
+```
 ## go channel重温
+- 
 ## 共享内存和共享变量
 ## 捕获竞态条件--catching race conditions
 ## context package
